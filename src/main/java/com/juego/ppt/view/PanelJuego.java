@@ -32,6 +32,7 @@ public class PanelJuego extends JPanel implements IPanelJuego {
     private final JLabel lblMensaje = new JLabel(" ", SwingConstants.CENTER);
 
     private final List<BotonRedondeado> botones = new ArrayList<>();
+    private final ReproductorSonido sonido = new ReproductorSonido();
 
     public PanelJuego() {
         setBackground(Tema.FONDO);
@@ -180,6 +181,12 @@ public class PanelJuego extends JPanel implements IPanelJuego {
         lblDuelo.setForeground(Tema.TEXTO);
         lblMensaje.setText(Tema.mensajeResultado(resultado));
         lblMensaje.setForeground(Tema.colorResultado(resultado));
+
+        if (resultado == Resultado.GANA) {
+            sonido.reproducirVictoria();
+        } else if (resultado == Resultado.PIERDE) {
+            sonido.reproducirDerrota();
+        }
     }
 
     @Override

@@ -22,31 +22,32 @@ la máquina, con interfaz gráfica. El objetivo es aplicar de forma didáctica:
 2. Elige entre **Piedra**, **Papel** o **Tijera**.
 3. El bot elige su jugada con `GeneradorDificultad` (azar sesgado según el nivel).
 4. Se comparan ambas jugadas:
-   - **Gana** → se suma **+1** al puntaje actual. El juego continúa.
-   - **Pierde** → el puntaje actual se **reinicia a 0**, se muestra el resultado durante una
-     **pausa breve (~1,2 s)** y se vuelve al **menú principal**.
+   - **Gana** → se suma **+1** al puntaje actual, suena el efecto de victoria (~2 s) y el
+     juego continúa.
+   - **Pierde** → el puntaje actual se **reinicia a 0**, suena el efecto de derrota (~3 s) y
+     se vuelve al **menú principal**.
    - **Empata** → la partida cuenta como jugada pero **no suma ni resta**; se permanece
      en la pantalla de juego.
 5. `puntaje` y `puntajeMaximo` se guardan en **variables en memoria** (sin persistencia).
-6. La **dificultad sube con las victorias acumuladas** (contador persistente que **no se
-   resetea al perder**) cada 10 victorias, hasta un tope (`NIVEL_MAX = 5`). El bot va desde
+6. La **dificultad sube con la racha actual** (cada 10 victorias **seguidas**) y **vuelve a 0
+   al perder** (el puntaje se reinicia), hasta un tope (`NIVEL_MAX = 5`). El bot va desde
    "juega fácil" (se deja ganar más seguido que el azar) hasta "contrarresta tu jugada
    anterior", sin volverse imbatible. El nivel se muestra al lado del puntaje: **`12 (Nivel 1)`**.
 
 ### Dificultad progresiva
 
-| Nivel | Victorias | Prob. de contrarrestar | Prob. de dejarse ganar | P(ganar) aprox. |
+| Nivel | Racha | Prob. de contrarrestar | Prob. de dejarse ganar | P(ganar) aprox. |
 |---|---|---|---|---|
-| 0 | 0–9   | 0,00 | 0,65 | 0,77 |
-| 1 | 10–19 | 0,12 | 0,52 | 0,64 |
-| 2 | 20–29 | 0,24 | 0,39 | 0,51 |
-| 3 | 30–39 | 0,36 | 0,26 | 0,39 |
-| 4 | 40–49 | 0,48 | 0,13 | 0,26 |
-| 5 | 50+   | 0,60 | 0,00 | 0,13 |
+| 0 | 0–9   | 0,00 | 0,80 | 0,87 |
+| 1 | 10–19 | 0,10 | 0,64 | 0,73 |
+| 2 | 20–29 | 0,20 | 0,48 | 0,59 |
+| 3 | 30–39 | 0,30 | 0,32 | 0,45 |
+| 4 | 40–49 | 0,40 | 0,16 | 0,31 |
+| 5 | 50+   | 0,50 | 0,00 | 0,17 |
 
-El nivel se mide sobre las **victorias acumuladas** (no sobre la racha), así que perder no
-borra el progreso. La referencia del bot es la **jugada anterior** del humano (no la de la
-ronda en curso); en la primera ronda juega al azar puro.
+El nivel se mide sobre el **puntaje** (racha de victorias seguidas), así que **se reinicia al
+perder**. La referencia del bot es la **jugada anterior** del humano (no la de la ronda en
+curso); en la primera ronda juega al azar puro.
 
 ### Tecnologías
 
@@ -93,8 +94,12 @@ ppt/
 │       ├── VentanaPrincipal.java
 │       ├── PanelMenu.java
 │       ├── PanelJuego.java
+│       ├── ReproductorSonido.java
 │       ├── Tema.java
 │       └── BotonRedondeado.java
+├── src/main/resources/com/juego/ppt/view/sonidos/
+│   ├── win.wav                    # efecto de victoria (~2 s)
+│   └── gameover.wav               # efecto de derrota (~3 s)
 └── src/test/java/com/juego/ppt/
     ├── model/
     │   ├── GeneradorGuion.java    # Doble de prueba
@@ -253,12 +258,12 @@ public class Dificultad {
         return Math.min(progreso / PUNTOS_POR_NIVEL, NIVEL_MAX);
     }
 
-    public double probabilidadContra(int nivel) {          // 0,00 → 0,60
-        return 0.60 * proporcion(nivel);
+    public double probabilidadContra(int nivel) {          // 0,00 → 0,50
+        return 0.50 * proporcion(nivel);
     }
 
-    public double probabilidadPierde(int nivel) {          // 0,65 → 0,00
-        return 0.65 * (1.0 - proporcion(nivel));
+    public double probabilidadPierde(int nivel) {          // 0,80 → 0,00
+        return 0.80 * (1.0 - proporcion(nivel));
     }
 
     private double proporcion(int nivel) {
@@ -336,7 +341,6 @@ public class Partida {
 
     private int puntaje;
     private int puntajeMaximo;
-    private int victoriasTotales;
     private Jugada ultimaJugadaMaquina;
 
     public Partida(Jugador humano, Jugador maquina, ResolutorReglas reglas, Dificultad dificultad) {
@@ -355,7 +359,6 @@ public class Partida {
         switch (resultado) {
             case GANA:
                 puntaje++;
-                victoriasTotales++;
                 if (puntaje > puntajeMaximo) puntajeMaximo = puntaje;
                 break;
             case PIERDE:
@@ -367,16 +370,15 @@ public class Partida {
         return resultado;
     }
 
-    public int getNivel()            { return dificultad.nivel(victoriasTotales); }
-    public int getPuntaje()          { return puntaje; }
-    public int getPuntajeMaximo()    { return puntajeMaximo; }
-    public int getVictoriasTotales() { return victoriasTotales; }
+    public int getNivel()          { return dificultad.nivel(puntaje); }
+    public int getPuntaje()        { return puntaje; }
+    public int getPuntajeMaximo()  { return puntajeMaximo; }
     public Jugada getJugadaMaquina() { return ultimaJugadaMaquina; }
 }
 ```
 
-> El **nivel se calcula sobre `victoriasTotales`** (contador persistente), por lo que **no baja
-> al perder**. La `puntaje` (racha) y `puntajeMaximo` (récord) se conservan aparte.
+> El **nivel se calcula sobre el puntaje** (racha de victorias seguidas), por lo que **se
+> reinicia a 0 al perder**. `puntajeMaximo` conserva el récord de la sesión.
 
 ---
 
@@ -482,6 +484,57 @@ etiqueta y atajos de teclado `1`/`2`/`3`. Los botones se deshabilitan al jugar y
 rehabilitan al reiniciar. El nivel se pinta con `Tema.etiquetaNivel(...)`, en fuente chica
 junto al número de puntaje.
 
+En `mostrarResultado(...)` reproduce el efecto de sonido correspondiente: **victoria** si
+`Resultado.GANA`, **derrota** si `Resultado.PIERDE`, y nada si `EMPATA`. El controlador es
+quien marca cuándo se vuelven a habilitar los botones (ver pausas en la sección 5).
+
+### 4.7 `ReproductorSonido` — efectos de sonido
+
+Encapsula la reproducción con **Java Sound** (`javax.sound.sampled`). Precarga los `Clip`
+desde el classpath y los dispara sin bloquear el EDT.
+
+```java
+public class ReproductorSonido {
+    private static final String RUTA_VICTORIA = "/com/juego/ppt/view/sonidos/win.wav";
+    private static final String RUTA_DERROTA = "/com/juego/ppt/view/sonidos/gameover.wav";
+
+    private final Clip victoria;
+    private final Clip derrota;
+
+    public ReproductorSonido() {
+        this.victoria = cargar(RUTA_VICTORIA);
+        this.derrota = cargar(RUTA_DERROTA);
+    }
+
+    public void reproducirVictoria() { reproducir(victoria); }
+    public void reproducirDerrota()  { reproducir(derrota); }
+
+    private Clip cargar(String ruta) {
+        try {
+            URL recurso = ReproductorSonido.class.getResource(ruta);
+            if (recurso == null) return null;
+            AudioInputStream audio = AudioSystem.getAudioInputStream(recurso);
+            Clip clip = AudioSystem.getClip();
+            clip.open(audio);
+            return clip;
+        } catch (Exception e) {
+            return null;                       // sin audio no se rompe
+        }
+    }
+
+    private void reproducir(Clip clip) {
+        if (clip == null) return;
+        clip.stop();
+        clip.setFramePosition(0);
+        clip.start();
+    }
+}
+```
+
+> Los `.wav` van en `src/main/resources/...` (no en `src/main/java`): Maven solo empaqueta
+> `src/main/resources`. Java Sound **no** reproduce `.mp3` sin un SPI externo, por eso se usan
+> `.wav` (PCM).
+
 ---
 
 ## 5. Controlador — *GRASP Controller / Indirection*
@@ -513,31 +566,36 @@ public class ProgramadorSwing implements Programador {
 
 ```java
 public class JuegoController implements IControlador {
-    private static final int PAUSA_DERROTA_MS = 1200;
+    private static final int PAUSA_VICTORIA_MS = 2000;
+    private static final int PAUSA_DERROTA_MS = 3000;
 
     private final Partida partida;
     private final INavegador navegador;
     private final IPanelMenu panelMenu;
     private final IPanelJuego panelJuego;
     private final Programador programador;
+    private final int pausaVictoriaMs;
     private final int pausaDerrotaMs;
 
-    // Constructor de producción: usa PAUSA_DERROTA_MS.
+    // Constructor de producción: usa los valores por defecto.
     public JuegoController(Partida partida, INavegador navegador,
                            IPanelMenu panelMenu, IPanelJuego panelJuego,
                            Programador programador) {
-        this(partida, navegador, panelMenu, panelJuego, programador, PAUSA_DERROTA_MS);
+        this(partida, navegador, panelMenu, panelJuego, programador,
+            PAUSA_VICTORIA_MS, PAUSA_DERROTA_MS);
     }
 
-    // Constructor con pausa inyectable (usado en tests).
+    // Constructor con pausas inyectables (usado en tests).
     public JuegoController(Partida partida, INavegador navegador,
                            IPanelMenu panelMenu, IPanelJuego panelJuego,
-                           Programador programador, int pausaDerrotaMs) {
+                           Programador programador,
+                           int pausaVictoriaMs, int pausaDerrotaMs) {
         this.partida = partida;
         this.navegador = navegador;
         this.panelMenu = panelMenu;
         this.panelJuego = panelJuego;
         this.programador = programador;
+        this.pausaVictoriaMs = pausaVictoriaMs;
         this.pausaDerrotaMs = pausaDerrotaMs;
         panelMenu.setControlador(this);
         panelJuego.setControlador(this);
@@ -560,9 +618,15 @@ public class JuegoController implements IControlador {
         if (resultado == Resultado.PIERDE) {
             panelMenu.setPuntajeMaximo(partida.getPuntajeMaximo());
             programador.enMs(pausaDerrotaMs, this::volverAlMenu);
+        } else if (resultado == Resultado.GANA) {
+            programador.enMs(pausaVictoriaMs, this::habilitarJugadas);
         } else {
-            panelJuego.setBotonesHabilitados(true);
+            habilitarJugadas();
         }
+    }
+
+    private void habilitarJugadas() {
+        panelJuego.setBotonesHabilitados(true);
     }
 
     private void volverAlMenu() {
@@ -629,26 +693,28 @@ Usuario           PanelJuego        JuegoController       Partida        Generad
   |                   |                   |<-- Resultado ----|
 ```
 
-El nivel se toma de las victorias acumuladas antes de resolver la ronda, de modo que las
-primeras 10 victorias se juegan en nivel 0 (fácil).
+El nivel se toma del puntaje (racha) antes de resolver la ronda, de modo que las primeras 10
+victorias seguidas se juegan en nivel 0 (fácil).
 
-### Flujo C — Victoria (continúa jugando)
+### Flujo C — Victoria (suena el efecto y continúa)
 
 ```
 Resultado = GANA
   Partida: puntaje++ ; puntajeMaximo = max(puntajeMaximo, puntaje)
-  JuegoController: setBotonesHabilitados(false) → actualizarPuntajes y mostrarResultado
-                   luego setBotonesHabilitados(true)
-  → permanece en PanelJuego
+  PanelJuego: muestra resultado y reproduce el efecto de VICTORIA (~2 s)
+  JuegoController: setBotonesHabilitados(false)
+                   programador.enMs(2000, habilitarJugadas)
+  → permanece en PanelJuego (botones bloqueados hasta que termina el sonido)
 ```
 
-### Flujo D — Derrota (pausa breve y vuelve al menú)
+### Flujo D — Derrota (suena el efecto y vuelve al menú)
 
 ```
 Resultado = PIERDE
   Partida: puntaje = 0
+  PanelJuego: muestra resultado y reproduce el efecto de DERROTA (~3 s)
   JuegoController: panelMenu.setPuntajeMaximo(puntajeMaximo)
-                   programador.enMs(1200, volverAlMenu)   // dentro: mostrar("MENU")
+                   programador.enMs(3000, volverAlMenu)   // dentro: mostrar("MENU")
   → regresa al menú principal (puntaje actual en 0, récord conservado)
 ```
 
@@ -657,7 +723,8 @@ Resultado = PIERDE
 ```
 Resultado = EMPATA
   Partida: sin cambios en el marcador
-  JuegoController: actualizarPuntajes + mostrarResultado(EMPATA, ...)
+  JuegoController: actualizarPuntajes + mostrarResultado(EMPATA, ...) (sin sonido ni pausa)
+                   habilita los botones de inmediato
   → permanece en PanelJuego
 ```
 
@@ -751,7 +818,8 @@ Resultado = EMPATA
 ## 10. Tests
 
 Batería de **78 tests** con JUnit 5, ejecutables sin abrir ventanas (surefire corre en modo
-headless: `-Djava.awt.headless=true`).
+headless: `-Djava.awt.headless=true`). El audio **no** se ejercita en la suite: los tests usan
+`PanelJuegoFake`, así que solo se valida la lógica de pausas (2000/3000 ms).
 
 ### 10.1 Ejecución
 
@@ -784,9 +852,9 @@ El wrapper usa Maven 3.9.16. El `pom.xml` fija Java 25, JUnit Jupiter 5.11.4,
 | `GeneradorDificultadTest` | Primera ronda sin estrategia; contrarresta la jugada anterior; se deja ganar en nivel 0; cae al azar fuera de las franjas (con `RandomFijo`). |
 | `JugadorHumanoTest` | `elegirJugada()` devuelve lo seteado; `null` sin selección. |
 | `JugadorMaquinaTest` | Delega en el `GeneradorJugada` inyectado, con el contexto `(rival, nivel)`. |
-| `PartidaTest` | Gana +1/actualiza máximo; pierde reinicia y conserva máximo; empate sin cambios; secuencia GANA·GANA·PIERDE → `0`/`2`; **regresión**: `getJugadaMaquina()` devuelve la jugada resuelta; el **nivel** sube cada 10 **victorias acumuladas** (aunque haya derrotas en el medio) y no baja al perder. |
+| `PartidaTest` | Gana +1/actualiza máximo; pierde reinicia y conserva máximo; empate sin cambios; secuencia GANA·GANA·PIERDE → `0`/`2`; **regresión**: `getJugadaMaquina()` devuelve la jugada resuelta; el **nivel** sube con 10 **victorias seguidas** y **se reinicia al perder**. |
 | `TemaTest` | `emoji`, `nombre`, `colorResultado`, `mensajeResultado` y `etiquetaNivel`. |
-| `JuegoControllerTest` | `iniciarJuego` reinicia/navega/habilita y muestra el nivel; victoria y empate actualizan y **no** navegan; derrota navega al menú tras la pausa, actualiza el récord y respeta el retardo inyectado. |
+| `JuegoControllerTest` | `iniciarJuego` reinicia/navega/habilita y muestra el nivel; victoria y empate actualizan y **no** navegan; la victoria agenda la pausa de 2000 ms; el empate rehabilita sin pausa; la derrota navega al menú tras 3000 ms, actualiza el récord y respeta los tiempos inyectados. |
 
 ---
 

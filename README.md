@@ -1,7 +1,7 @@
 # Piedra, Papel o Tijera
 
 Juego de escritorio en **Java + Swing** que enfrenta al jugador contra la máquina, con
-**dificultad progresiva**, tema oscuro minimalista y emojis (sin imágenes).
+**dificultad progresiva**, **efectos de sonido**, tema oscuro minimalista y emojis (sin imágenes).
 
 > El diseño completo (arquitectura MVC, POO, patrones GRASP, principios SOLID, flujos,
 > diagramas y detalle de los tests) está en [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md).
@@ -13,26 +13,28 @@ Juego de escritorio en **Java + Swing** que enfrenta al jugador contra la máqui
 1. En el menú principal, pulsá **Empezar juego**.
 2. Elegí **Piedra 🪨**, **Papel 📄** o **Tijera ✂️** (botones o teclas `1` / `2` / `3`).
 3. La máquina elige su jugada y se comparan:
-   - **Ganás** → +1 al puntaje y seguís jugando.
-   - **Perdés** → el puntaje vuelve a 0 y, tras una pausa breve, volvés al menú.
+   - **Ganás** → +1 al puntaje, suena el efecto de victoria (~2 s) y seguís jugando.
+   - **Perdés** → el puntaje vuelve a 0, suena el efecto de derrota (~3 s) y volvés al menú.
    - **Empate** → no suma ni resta y seguís jugando.
 
-En pantalla se ve el puntaje y el **nivel** actual: `12 (Nivel 1)`.
+En pantalla se ve el puntaje y el **nivel** actual: `12 (Nivel 1)`. Durante la reproducción
+de cada efecto, los botones quedan bloqueados y se rehabilita al terminar.
 
 ## Dificultad progresiva
 
-El nivel depende de las **victorias acumuladas** (no se resetea al perder) y sube cada
-**10 victorias**, hasta un tope de **5**. El bot arranca fácil (se deja ganar más seguido
-que el azar) y se vuelve más listo (contrarresta tu jugada anterior), sin volverse imbatible.
+El nivel depende de la **racha actual** de victorias: sube cada **10 victorias seguidas**,
+hasta un tope de **5**, y **vuelve a 0 al perder** (cuando el puntaje se reinicia). El bot
+arranca fácil (se deja ganar más seguido que el azar) y se vuelve más listo (contrarresta tu
+jugada anterior), sin volverse imbatible.
 
-| Nivel | Victorias | P(ganar) aprox. |
+| Nivel | Racha | P(ganar) aprox. |
 |---|---|---|
-| 0 | 0–9 | 0,77 |
-| 1 | 10–19 | 0,64 |
-| 2 | 20–29 | 0,51 |
-| 3 | 30–39 | 0,39 |
-| 4 | 40–49 | 0,26 |
-| 5 | 50+ | 0,13 |
+| 0 | 0–9 | 0,87 |
+| 1 | 10–19 | 0,73 |
+| 2 | 20–29 | 0,59 |
+| 3 | 30–39 | 0,45 |
+| 4 | 40–49 | 0,31 |
+| 5 | 50+ | 0,17 |
 
 ## Arquitectura (resumen)
 
@@ -43,7 +45,12 @@ src/main/java/com/juego/ppt/
 ├── Main.java        # Punto de entrada / raíz de composición
 ├── model/           # Jugada, Jugador, Partida, Dificultad, Generador*, ResolutorReglas
 ├── controller/      # JuegoController, Programador (interfaces + implementaciones)
-└── view/            # VentanaPrincipal, PanelMenu, PanelJuego, Tema, BotonRedondeado
+└── view/            # VentanaPrincipal, PanelMenu, PanelJuego, Tema, BotonRedondeado,
+                     # ReproductorSonido (efectos de victoria/derrota)
+
+src/main/resources/com/juego/ppt/view/sonidos/
+├── win.wav          # efecto de victoria (~2 s)
+└── gameover.wav     # efecto de derrota (~3 s)
 ```
 
 - **`model`** no conoce la GUI; **`view` → `controller` → `model`**.

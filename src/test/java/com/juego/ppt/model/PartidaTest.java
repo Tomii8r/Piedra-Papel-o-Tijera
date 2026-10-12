@@ -83,15 +83,13 @@ class PartidaTest {
     @Test
     void elNivelArrancaEnCero() {
         assertEquals(0, partidaCon().getNivel());
-        assertEquals(0, partidaCon().getVictoriasTotales());
     }
 
     @Test
-    void elNivelSubeCadaDiezVictoriasAcumuladas() {
-        Jugada[] guion = new Jugada[20];
-        for (int i = 0; i < guion.length; i += 2) {
+    void elNivelSubeConDiezVictoriasSeguidas() {
+        Jugada[] guion = new Jugada[10];
+        for (int i = 0; i < guion.length; i++) {
             guion[i] = Jugada.TIJERA;
-            guion[i + 1] = Jugada.PAPEL;
         }
         Partida partida = partidaCon(guion);
 
@@ -99,25 +97,27 @@ class PartidaTest {
             partida.jugarRonda(Jugada.PIEDRA);
         }
 
-        assertEquals(10, partida.getVictoriasTotales());
+        assertEquals(10, partida.getPuntaje());
         assertEquals(1, partida.getNivel());
-        assertEquals(0, partida.getPuntaje());
-        assertEquals(1, partida.getPuntajeMaximo());
     }
 
     @Test
-    void lasVictoriasAcumuladasNoBajanAlPerder() {
-        Jugada[] guion = {Jugada.TIJERA, Jugada.TIJERA, Jugada.PAPEL, Jugada.TIJERA};
+    void elNivelSeReiniciaAlPerder() {
+        Jugada[] guion = new Jugada[11];
+        for (int i = 0; i < 10; i++) {
+            guion[i] = Jugada.TIJERA;
+        }
+        guion[10] = Jugada.PAPEL;
         Partida partida = partidaCon(guion);
 
-        partida.jugarRonda(Jugada.PIEDRA);
-        partida.jugarRonda(Jugada.PIEDRA);
-        partida.jugarRonda(Jugada.PIEDRA);
-        int nivelTrasPerder = partida.getNivel();
+        for (int i = 0; i < 10; i++) {
+            partida.jugarRonda(Jugada.PIEDRA);
+        }
+        assertEquals(1, partida.getNivel());
 
         partida.jugarRonda(Jugada.PIEDRA);
 
-        assertEquals(3, partida.getVictoriasTotales());
-        assertEquals(nivelTrasPerder, partida.getNivel());
+        assertEquals(0, partida.getPuntaje());
+        assertEquals(0, partida.getNivel());
     }
 }

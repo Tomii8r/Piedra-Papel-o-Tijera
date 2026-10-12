@@ -8,7 +8,6 @@ public class Partida {
 
     private int puntaje;
     private int puntajeMaximo;
-    private int victoriasTotales;
     private Jugada ultimaJugadaMaquina;
 
     public Partida(Jugador humano, Jugador maquina, ResolutorReglas reglas, Dificultad dificultad) {
@@ -27,7 +26,6 @@ public class Partida {
         switch (resultado) {
             case GANA:
                 puntaje++;
-                victoriasTotales++;
                 if (puntaje > puntajeMaximo) {
                     puntajeMaximo = puntaje;
                 }
@@ -42,7 +40,7 @@ public class Partida {
     }
 
     public int getNivel() {
-        return dificultad.nivel(victoriasTotales);
+        return dificultad.nivel(puntaje);
     }
 
     public int getPuntaje() {
@@ -51,10 +49,6 @@ public class Partida {
 
     public int getPuntajeMaximo() {
         return puntajeMaximo;
-    }
-
-    public int getVictoriasTotales() {
-        return victoriasTotales;
     }
 
     public Jugada getJugadaMaquina() {

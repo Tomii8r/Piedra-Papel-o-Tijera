@@ -30,12 +30,12 @@ class DificultadTest {
     @Test
     void enNivelCeroNoContrarrestaYSoloSeDejaGanar() {
         assertEquals(0.0, dificultad.probabilidadContra(0), DELTA);
-        assertEquals(0.65, dificultad.probabilidadPierde(0), DELTA);
+        assertEquals(0.80, dificultad.probabilidadPierde(0), DELTA);
     }
 
     @Test
     void enElNivelMaximoContrarrestaElTopeYNoSeDejaGanar() {
-        assertEquals(0.60, dificultad.probabilidadContra(Dificultad.NIVEL_MAX), DELTA);
+        assertEquals(0.50, dificultad.probabilidadContra(Dificultad.NIVEL_MAX), DELTA);
         assertEquals(0.0, dificultad.probabilidadPierde(Dificultad.NIVEL_MAX), DELTA);
     }
 

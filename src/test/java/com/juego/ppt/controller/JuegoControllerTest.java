@@ -18,7 +18,8 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class JuegoControllerTest {
-    private static final int PAUSA_DERROTA_MS = 1200;
+    private static final int PAUSA_VICTORIA_MS = 2000;
+    private static final int PAUSA_DERROTA_MS = 3000;
 
     private PanelMenuFake menu;
     private PanelJuegoFake juego;
@@ -71,11 +72,12 @@ class JuegoControllerTest {
         assertEquals(1, juego.getPuntajeMaximo());
         assertTrue(juego.isBotonesHabilitados());
         assertNull(navegador.getUltimaPantalla());
-        assertEquals(0, programador.getLlamadas());
+        assertEquals(1, programador.getLlamadas());
+        assertEquals(PAUSA_VICTORIA_MS, programador.getUltimoRetardo());
     }
 
     @Test
-    void elNivelMostradoSubeConLasVictoriasAcumuladas() {
+    void elNivelMostradoSubeConLaRachaDeVictorias() {
         Jugada[] diezVictorias = new Jugada[10];
         for (int i = 0; i < diezVictorias.length; i++) {
             diezVictorias[i] = Jugada.TIJERA;
@@ -98,6 +100,7 @@ class JuegoControllerTest {
         assertEquals(0, juego.getPuntajeMaximo());
         assertTrue(juego.isBotonesHabilitados());
         assertNull(navegador.getUltimaPantalla());
+        assertEquals(0, programador.getLlamadas());
     }
 
     @Test
@@ -125,15 +128,24 @@ class JuegoControllerTest {
     }
 
     @Test
-    void sePuedeInyectarOtroTiempoDePausa() {
-        Partida partida = new Partida(
+    void sePuedenInyectarLosTiemposDePausa() {
+        Partida partidaVictoria = new Partida(
+            new JugadorHumano("Jugador"),
+            new JugadorMaquina("Bot", new GeneradorGuion(Jugada.TIJERA)),
+            new ResolutorReglas(),
+            new Dificultad());
+        new JuegoController(partidaVictoria, navegador, menu, juego, programador, 250, 350)
+            .elegirJugada(Jugada.PIEDRA);
+        assertEquals(250, programador.getUltimoRetardo());
+
+        setUp();
+        Partida partidaDerrota = new Partida(
             new JugadorHumano("Jugador"),
             new JugadorMaquina("Bot", new GeneradorGuion(Jugada.PAPEL)),
             new ResolutorReglas(),
             new Dificultad());
-        new JuegoController(partida, navegador, menu, juego, programador, 250)
+        new JuegoController(partidaDerrota, navegador, menu, juego, programador, 250, 350)
             .elegirJugada(Jugada.PIEDRA);
-
-        assertEquals(250, programador.getUltimoRetardo());
+        assertEquals(350, programador.getUltimoRetardo());
     }
 }

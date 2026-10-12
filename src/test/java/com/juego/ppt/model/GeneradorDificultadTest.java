@@ -65,7 +65,7 @@ class GeneradorDificultadTest {
 
     @Test
     void enElNivelMaximoContrarrestaConElTope() {
-        GeneradorDificultad generador = generadorCon(0.5, Jugada.PIEDRA);
+        GeneradorDificultad generador = generadorCon(0.4, Jugada.PIEDRA);
 
         generador.generar(Jugada.PIEDRA, NIVEL_MAXIMO);
         Jugada respuesta = generador.generar(Jugada.TIJERA, NIVEL_MAXIMO);
