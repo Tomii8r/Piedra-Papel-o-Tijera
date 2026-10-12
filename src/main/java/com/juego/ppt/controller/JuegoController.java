@@ -8,15 +8,13 @@ import com.juego.ppt.view.IPanelJuego;
 import com.juego.ppt.view.IPanelMenu;
 
 public class JuegoController implements IControlador {
-    private static final int PAUSA_VICTORIA_MS = 2000;
-    private static final int PAUSA_DERROTA_MS = 3000;
+    private static final int PAUSA_DERROTA_MS = 2000;
 
     private final Partida partida;
     private final INavegador navegador;
     private final IPanelMenu panelMenu;
     private final IPanelJuego panelJuego;
     private final Programador programador;
-    private final int pausaVictoriaMs;
     private final int pausaDerrotaMs;
 
     public JuegoController(Partida partida,
@@ -24,8 +22,7 @@ public class JuegoController implements IControlador {
                            IPanelMenu panelMenu,
                            IPanelJuego panelJuego,
                            Programador programador) {
-        this(partida, navegador, panelMenu, panelJuego, programador,
-            PAUSA_VICTORIA_MS, PAUSA_DERROTA_MS);
+        this(partida, navegador, panelMenu, panelJuego, programador, PAUSA_DERROTA_MS);
     }
 
     public JuegoController(Partida partida,
@@ -33,14 +30,12 @@ public class JuegoController implements IControlador {
                            IPanelMenu panelMenu,
                            IPanelJuego panelJuego,
                            Programador programador,
-                           int pausaVictoriaMs,
                            int pausaDerrotaMs) {
         this.partida = partida;
         this.navegador = navegador;
         this.panelMenu = panelMenu;
         this.panelJuego = panelJuego;
         this.programador = programador;
-        this.pausaVictoriaMs = pausaVictoriaMs;
         this.pausaDerrotaMs = pausaDerrotaMs;
         panelMenu.setControlador(this);
         panelJuego.setControlador(this);
@@ -65,15 +60,9 @@ public class JuegoController implements IControlador {
         if (resultado == Resultado.PIERDE) {
             panelMenu.setPuntajeMaximo(partida.getPuntajeMaximo());
             programador.enMs(pausaDerrotaMs, this::volverAlMenu);
-        } else if (resultado == Resultado.GANA) {
-            programador.enMs(pausaVictoriaMs, this::habilitarJugadas);
         } else {
-            habilitarJugadas();
+            panelJuego.setBotonesHabilitados(true);
         }
-    }
-
-    private void habilitarJugadas() {
-        panelJuego.setBotonesHabilitados(true);
     }
 
     private void volverAlMenu() {

@@ -4,8 +4,8 @@ public class Dificultad {
     public static final int PUNTOS_POR_NIVEL = 10;
     public static final int NIVEL_MAX = 5;
 
-    private static final double PROBABILIDAD_CONTRA_MAXIMA = 0.50;
-    private static final double PROBABILIDAD_PIERDE_INICIAL = 0.80;
+    private static final double PROBABILIDAD_CONTRA_MAXIMA = 0.35;
+    private static final double PROBABILIDAD_PIERDE_INICIAL = 0.90;
 
     public int nivel(int puntajeMaximo) {
         return Math.min(puntajeMaximo / PUNTOS_POR_NIVEL, NIVEL_MAX);

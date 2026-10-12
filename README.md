@@ -13,28 +13,27 @@ Juego de escritorio en **Java + Swing** que enfrenta al jugador contra la máqui
 1. En el menú principal, pulsá **Empezar juego**.
 2. Elegí **Piedra 🪨**, **Papel 📄** o **Tijera ✂️** (botones o teclas `1` / `2` / `3`).
 3. La máquina elige su jugada y se comparan:
-   - **Ganás** → +1 al puntaje, suena el efecto de victoria (~2 s) y seguís jugando.
-   - **Perdés** → el puntaje vuelve a 0, suena el efecto de derrota (~3 s) y volvés al menú.
+   - **Ganás** → +1 al puntaje, suena el efecto de victoria y seguís jugando al instante.
+   - **Perdés** → el puntaje vuelve a 0, suena el efecto de derrota (~2 s) y volvés al menú.
    - **Empate** → no suma ni resta y seguís jugando.
 
-En pantalla se ve el puntaje y el **nivel** actual: `12 (Nivel 1)`. Durante la reproducción
-de cada efecto, los botones quedan bloqueados y se rehabilita al terminar.
+En pantalla se ve el puntaje y el **nivel** actual: `12 (Nivel 1)`.
 
 ## Dificultad progresiva
 
 El nivel depende de la **racha actual** de victorias: sube cada **10 victorias seguidas**,
 hasta un tope de **5**, y **vuelve a 0 al perder** (cuando el puntaje se reinicia). El bot
-arranca fácil (se deja ganar más seguido que el azar) y se vuelve más listo (contrarresta tu
-jugada anterior), sin volverse imbatible.
+arranca muy fácil (se deja ganar seguido) y se vuelve más listo (contrarresta tu jugada
+anterior), sin volverse imbatible.
 
 | Nivel | Racha | P(ganar) aprox. |
 |---|---|---|
-| 0 | 0–9 | 0,87 |
-| 1 | 10–19 | 0,73 |
-| 2 | 20–29 | 0,59 |
-| 3 | 30–39 | 0,45 |
-| 4 | 40–49 | 0,31 |
-| 5 | 50+ | 0,17 |
+| 0 | 0–9 | 0,93 |
+| 1 | 10–19 | 0,79 |
+| 2 | 20–29 | 0,65 |
+| 3 | 30–39 | 0,50 |
+| 4 | 40–49 | 0,36 |
+| 5 | 50+ | 0,22 |
 
 ## Arquitectura (resumen)
 
@@ -49,8 +48,8 @@ src/main/java/com/juego/ppt/
                      # ReproductorSonido (efectos de victoria/derrota)
 
 src/main/resources/com/juego/ppt/view/sonidos/
-├── win.wav          # efecto de victoria (~2 s)
-└── gameover.wav     # efecto de derrota (~3 s)
+├── win.wav          # efecto de victoria
+└── gameover.wav     # efecto de derrota
 ```
 
 - **`model`** no conoce la GUI; **`view` → `controller` → `model`**.

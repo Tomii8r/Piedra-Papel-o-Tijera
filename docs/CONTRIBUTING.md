@@ -22,9 +22,9 @@ la máquina, con interfaz gráfica. El objetivo es aplicar de forma didáctica:
 2. Elige entre **Piedra**, **Papel** o **Tijera**.
 3. El bot elige su jugada con `GeneradorDificultad` (azar sesgado según el nivel).
 4. Se comparan ambas jugadas:
-   - **Gana** → se suma **+1** al puntaje actual, suena el efecto de victoria (~2 s) y el
-     juego continúa.
-   - **Pierde** → el puntaje actual se **reinicia a 0**, suena el efecto de derrota (~3 s) y
+   - **Gana** → se suma **+1** al puntaje actual, suena el efecto de victoria y el juego
+     continúa al instante.
+   - **Pierde** → el puntaje actual se **reinicia a 0**, suena el efecto de derrota (~2 s) y
      se vuelve al **menú principal**.
    - **Empata** → la partida cuenta como jugada pero **no suma ni resta**; se permanece
      en la pantalla de juego.
@@ -38,12 +38,12 @@ la máquina, con interfaz gráfica. El objetivo es aplicar de forma didáctica:
 
 | Nivel | Racha | Prob. de contrarrestar | Prob. de dejarse ganar | P(ganar) aprox. |
 |---|---|---|---|---|
-| 0 | 0–9   | 0,00 | 0,80 | 0,87 |
-| 1 | 10–19 | 0,10 | 0,64 | 0,73 |
-| 2 | 20–29 | 0,20 | 0,48 | 0,59 |
-| 3 | 30–39 | 0,30 | 0,32 | 0,45 |
-| 4 | 40–49 | 0,40 | 0,16 | 0,31 |
-| 5 | 50+   | 0,50 | 0,00 | 0,17 |
+| 0 | 0–9   | 0,00 | 0,90 | 0,93 |
+| 1 | 10–19 | 0,07 | 0,72 | 0,79 |
+| 2 | 20–29 | 0,14 | 0,54 | 0,65 |
+| 3 | 30–39 | 0,21 | 0,36 | 0,50 |
+| 4 | 40–49 | 0,28 | 0,18 | 0,36 |
+| 5 | 50+   | 0,35 | 0,00 | 0,22 |
 
 El nivel se mide sobre el **puntaje** (racha de victorias seguidas), así que **se reinicia al
 perder**. La referencia del bot es la **jugada anterior** del humano (no la de la ronda en
@@ -98,8 +98,8 @@ ppt/
 │       ├── Tema.java
 │       └── BotonRedondeado.java
 ├── src/main/resources/com/juego/ppt/view/sonidos/
-│   ├── win.wav                    # efecto de victoria (~2 s)
-│   └── gameover.wav               # efecto de derrota (~3 s)
+│   ├── win.wav                    # efecto de victoria
+│   └── gameover.wav               # efecto de derrota
 └── src/test/java/com/juego/ppt/
     ├── model/
     │   ├── GeneradorGuion.java    # Doble de prueba
@@ -258,12 +258,12 @@ public class Dificultad {
         return Math.min(progreso / PUNTOS_POR_NIVEL, NIVEL_MAX);
     }
 
-    public double probabilidadContra(int nivel) {          // 0,00 → 0,50
-        return 0.50 * proporcion(nivel);
+    public double probabilidadContra(int nivel) {          // 0,00 → 0,35
+        return 0.35 * proporcion(nivel);
     }
 
-    public double probabilidadPierde(int nivel) {          // 0,80 → 0,00
-        return 0.80 * (1.0 - proporcion(nivel));
+    public double probabilidadPierde(int nivel) {          // 0,90 → 0,00
+        return 0.90 * (1.0 - proporcion(nivel));
     }
 
     private double proporcion(int nivel) {
@@ -566,36 +566,31 @@ public class ProgramadorSwing implements Programador {
 
 ```java
 public class JuegoController implements IControlador {
-    private static final int PAUSA_VICTORIA_MS = 2000;
-    private static final int PAUSA_DERROTA_MS = 3000;
+    private static final int PAUSA_DERROTA_MS = 2000;
 
     private final Partida partida;
     private final INavegador navegador;
     private final IPanelMenu panelMenu;
     private final IPanelJuego panelJuego;
     private final Programador programador;
-    private final int pausaVictoriaMs;
     private final int pausaDerrotaMs;
 
-    // Constructor de producción: usa los valores por defecto.
+    // Constructor de producción: usa el valor por defecto.
     public JuegoController(Partida partida, INavegador navegador,
                            IPanelMenu panelMenu, IPanelJuego panelJuego,
                            Programador programador) {
-        this(partida, navegador, panelMenu, panelJuego, programador,
-            PAUSA_VICTORIA_MS, PAUSA_DERROTA_MS);
+        this(partida, navegador, panelMenu, panelJuego, programador, PAUSA_DERROTA_MS);
     }
 
-    // Constructor con pausas inyectables (usado en tests).
+    // Constructor con pausa inyectable (usado en tests).
     public JuegoController(Partida partida, INavegador navegador,
                            IPanelMenu panelMenu, IPanelJuego panelJuego,
-                           Programador programador,
-                           int pausaVictoriaMs, int pausaDerrotaMs) {
+                           Programador programador, int pausaDerrotaMs) {
         this.partida = partida;
         this.navegador = navegador;
         this.panelMenu = panelMenu;
         this.panelJuego = panelJuego;
         this.programador = programador;
-        this.pausaVictoriaMs = pausaVictoriaMs;
         this.pausaDerrotaMs = pausaDerrotaMs;
         panelMenu.setControlador(this);
         panelJuego.setControlador(this);
@@ -618,15 +613,9 @@ public class JuegoController implements IControlador {
         if (resultado == Resultado.PIERDE) {
             panelMenu.setPuntajeMaximo(partida.getPuntajeMaximo());
             programador.enMs(pausaDerrotaMs, this::volverAlMenu);
-        } else if (resultado == Resultado.GANA) {
-            programador.enMs(pausaVictoriaMs, this::habilitarJugadas);
         } else {
-            habilitarJugadas();
+            panelJuego.setBotonesHabilitados(true);   // victoria y empate siguen al instante
         }
-    }
-
-    private void habilitarJugadas() {
-        panelJuego.setBotonesHabilitados(true);
     }
 
     private void volverAlMenu() {
@@ -701,10 +690,9 @@ victorias seguidas se juegan en nivel 0 (fácil).
 ```
 Resultado = GANA
   Partida: puntaje++ ; puntajeMaximo = max(puntajeMaximo, puntaje)
-  PanelJuego: muestra resultado y reproduce el efecto de VICTORIA (~2 s)
-  JuegoController: setBotonesHabilitados(false)
-                   programador.enMs(2000, habilitarJugadas)
-  → permanece en PanelJuego (botones bloqueados hasta que termina el sonido)
+  PanelJuego: muestra resultado y reproduce el efecto de VICTORIA
+  JuegoController: habilita los botones al instante (sin pausa)
+  → permanece en PanelJuego
 ```
 
 ### Flujo D — Derrota (suena el efecto y vuelve al menú)
@@ -712,9 +700,9 @@ Resultado = GANA
 ```
 Resultado = PIERDE
   Partida: puntaje = 0
-  PanelJuego: muestra resultado y reproduce el efecto de DERROTA (~3 s)
+  PanelJuego: muestra resultado y reproduce el efecto de DERROTA (~2 s)
   JuegoController: panelMenu.setPuntajeMaximo(puntajeMaximo)
-                   programador.enMs(3000, volverAlMenu)   // dentro: mostrar("MENU")
+                   programador.enMs(2000, volverAlMenu)   // dentro: mostrar("MENU")
   → regresa al menú principal (puntaje actual en 0, récord conservado)
 ```
 
@@ -819,7 +807,7 @@ Resultado = EMPATA
 
 Batería de **78 tests** con JUnit 5, ejecutables sin abrir ventanas (surefire corre en modo
 headless: `-Djava.awt.headless=true`). El audio **no** se ejercita en la suite: los tests usan
-`PanelJuegoFake`, así que solo se valida la lógica de pausas (2000/3000 ms).
+`PanelJuegoFake`, así que solo se valida la lógica de la pausa por derrota (2000 ms).
 
 ### 10.1 Ejecución
 
@@ -854,7 +842,7 @@ El wrapper usa Maven 3.9.16. El `pom.xml` fija Java 25, JUnit Jupiter 5.11.4,
 | `JugadorMaquinaTest` | Delega en el `GeneradorJugada` inyectado, con el contexto `(rival, nivel)`. |
 | `PartidaTest` | Gana +1/actualiza máximo; pierde reinicia y conserva máximo; empate sin cambios; secuencia GANA·GANA·PIERDE → `0`/`2`; **regresión**: `getJugadaMaquina()` devuelve la jugada resuelta; el **nivel** sube con 10 **victorias seguidas** y **se reinicia al perder**. |
 | `TemaTest` | `emoji`, `nombre`, `colorResultado`, `mensajeResultado` y `etiquetaNivel`. |
-| `JuegoControllerTest` | `iniciarJuego` reinicia/navega/habilita y muestra el nivel; victoria y empate actualizan y **no** navegan; la victoria agenda la pausa de 2000 ms; el empate rehabilita sin pausa; la derrota navega al menú tras 3000 ms, actualiza el récord y respeta los tiempos inyectados. |
+| `JuegoControllerTest` | `iniciarJuego` reinicia/navega/habilita y muestra el nivel; victoria y empate actualizan, **no** navegan y siguen al instante (sin pausa); la derrota navega al menú tras 2000 ms, actualiza el récord y respeta el tiempo inyectado. |
 
 ---
 
