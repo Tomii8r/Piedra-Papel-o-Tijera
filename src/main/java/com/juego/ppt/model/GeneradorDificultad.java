@@ -1,13 +1,15 @@
 package com.juego.ppt.model;
 
+import java.util.Optional;
 import java.util.Random;
 
 public class GeneradorDificultad implements GeneradorJugada {
+    private static final double MINIMO_CONTRA_PATRON = 0.50;
+
     private final GeneradorJugada azar;
     private final Dificultad dificultad;
     private final Random random;
-
-    private Jugada jugadaAnteriorHumano;
+    private final PredictorJugada predictor = new PredictorJugada();
 
     public GeneradorDificultad(GeneradorJugada azar, Dificultad dificultad, Random random) {
         this.azar = azar;
@@ -17,23 +19,22 @@ public class GeneradorDificultad implements GeneradorJugada {
 
     @Override
     public Jugada generar(Jugada jugadaHumano, int nivel) {
+        Optional<Jugada> predicha = predictor.predecir();
+
         Jugada respuesta;
-        if (jugadaAnteriorHumano == null) {
+        if (predicha.isEmpty()) {
             respuesta = azar.generar(jugadaHumano, nivel);
         } else {
-            double probabilidadContra = dificultad.probabilidadContra(nivel);
-            double probabilidadPierde = dificultad.probabilidadPierde(nivel);
-            double tirada = random.nextDouble();
-
-            if (tirada < probabilidadContra) {
-                respuesta = jugadaAnteriorHumano.vencedora();
-            } else if (tirada < probabilidadContra + probabilidadPierde) {
-                respuesta = jugadaAnteriorHumano.perdedora();
+            double probabilidadContra =
+                Math.max(dificultad.probabilidadContra(nivel), MINIMO_CONTRA_PATRON);
+            if (random.nextDouble() < probabilidadContra) {
+                respuesta = predicha.get().vencedora();
             } else {
                 respuesta = azar.generar(jugadaHumano, nivel);
             }
         }
-        jugadaAnteriorHumano = jugadaHumano;
+
+        predictor.registrar(jugadaHumano);
         return respuesta;
     }
 }

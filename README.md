@@ -19,21 +19,14 @@ Juego de escritorio en **Java + Swing** que enfrenta al jugador contra la máqui
 
 En pantalla se ve el puntaje y el **nivel** actual: `12 (Nivel 1)`.
 
-## Dificultad progresiva
+## El bot aprende tu patrón
 
-El nivel depende de la **racha actual** de victorias: sube cada **10 victorias seguidas**,
-hasta un tope de **5**, y **vuelve a 0 al perder** (cuando el puntaje se reinicia). El bot
-arranca muy fácil (se deja ganar seguido) y se vuelve más listo (contrarresta tu jugada
-anterior), sin volverse imbatible.
+El bot **aprende desde la primera ronda** (`PredictorJugada`, una cadena de Markov): si venís
+repitiendo, predice tu próxima jugada y te la **contrarresta con una probabilidad de al menos
+50%**. Si jugás variado y no hay patrón claro, juega al azar.
 
-| Nivel | Racha | P(ganar) aprox. |
-|---|---|---|
-| 0 | 0–9 | 0,93 |
-| 1 | 10–19 | 0,79 |
-| 2 | 20–29 | 0,65 |
-| 3 | 30–39 | 0,50 |
-| 4 | 40–49 | 0,36 |
-| 5 | 50+ | 0,22 |
+El **nivel** (sube cada 10 victorias **seguidas**, tope 5, y vuelve a 0 al perder) se muestra
+junto al puntaje: `12 (Nivel 1)`.
 
 ## Arquitectura (resumen)
 
@@ -42,7 +35,8 @@ Proyecto **Maven** con arquitectura **MVC** en el paquete `com.juego.ppt`:
 ```
 src/main/java/com/juego/ppt/
 ├── Main.java        # Punto de entrada / raíz de composición
-├── model/           # Jugada, Jugador, Partida, Dificultad, Generador*, ResolutorReglas
+├── model/           # Jugada, Jugador, Partida, Dificultad, PredictorJugada, Generador*,
+                     # ResolutorReglas
 ├── controller/      # JuegoController, Programador (interfaces + implementaciones)
 └── view/            # VentanaPrincipal, PanelMenu, PanelJuego, Tema, BotonRedondeado,
                      # ReproductorSonido (efectos de victoria/derrota)
@@ -79,7 +73,7 @@ java -cp target\classes com.juego.ppt.Main
 
 ## Tests
 
-Batería de **78 tests** con **JUnit 5**, sin abrir ventanas (modo headless):
+Batería de **84 tests** con **JUnit 5**, sin abrir ventanas (modo headless):
 
 ```powershell
 .\mvnw.cmd test

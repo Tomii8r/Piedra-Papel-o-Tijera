@@ -5,8 +5,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class GeneradorDificultadTest {
-    private static final int NIVEL_MEDIO = 1;
-    private static final int NIVEL_MAXIMO = Dificultad.NIVEL_MAX;
+    private static final int NIVEL_CERO = 0;
 
     private final Dificultad dificultad = new Dificultad();
 
@@ -15,61 +14,57 @@ class GeneradorDificultadTest {
         return new GeneradorDificultad(azarFijo, dificultad, new RandomFijo(tirada));
     }
 
+    private void sembrar(GeneradorDificultad generador, int nivel, Jugada... jugadas) {
+        for (Jugada jugada : jugadas) {
+            generador.generar(jugada, nivel);
+        }
+    }
+
     @Test
-    void laPrimeraRondaNoUsaEstrategia() {
+    void sinPrediccionJuegaAlAzar() {
         GeneradorDificultad generador = generadorCon(0.0, Jugada.PAPEL);
 
-        assertEquals(Jugada.PAPEL, generador.generar(Jugada.PIEDRA, NIVEL_MAXIMO));
+        assertEquals(Jugada.PAPEL, generador.generar(Jugada.PIEDRA, NIVEL_CERO));
     }
 
     @Test
-    void contrarrestaLaJugadaAnteriorDelHumano() {
-        GeneradorDificultad generador = generadorCon(0.0, Jugada.PIEDRA);
+    void contrarrestaLaJugadaPredicha() {
+        GeneradorDificultad generador = generadorCon(0.0, Jugada.TIJERA);
+        sembrar(generador, NIVEL_CERO, Jugada.PIEDRA, Jugada.TIJERA, Jugada.PIEDRA, Jugada.TIJERA);
 
-        generador.generar(Jugada.PIEDRA, NIVEL_MEDIO);
-        Jugada respuesta = generador.generar(Jugada.TIJERA, NIVEL_MEDIO);
+        Jugada respuesta = generador.generar(Jugada.PIEDRA, NIVEL_CERO);
 
         assertEquals(Jugada.PAPEL, respuesta);
     }
 
     @Test
-    void usaSiempreLaUltimaJugadaDelHumanoComoReferencia() {
-        GeneradorDificultad generador = generadorCon(0.0, Jugada.PIEDRA);
+    void alRepetirLaMismaJugadaLaContrarrestaDesdeElNivelCero() {
+        GeneradorDificultad generador = generadorCon(0.0, Jugada.TIJERA);
+        sembrar(generador, NIVEL_CERO, Jugada.PIEDRA, Jugada.PIEDRA);
 
-        generador.generar(Jugada.PIEDRA, NIVEL_MEDIO);
-        generador.generar(Jugada.TIJERA, NIVEL_MEDIO);
-        Jugada respuesta = generador.generar(Jugada.PAPEL, NIVEL_MEDIO);
-
-        assertEquals(Jugada.PIEDRA, respuesta);
-    }
-
-    @Test
-    void enNivelCeroSeDejaGanarCuandoCaeEnSuFranja() {
-        GeneradorDificultad generador = generadorCon(0.2, Jugada.PAPEL);
-
-        generador.generar(Jugada.PIEDRA, 0);
-        Jugada respuesta = generador.generar(Jugada.TIJERA, 0);
-
-        assertEquals(Jugada.TIJERA, respuesta);
-    }
-
-    @Test
-    void juegaAlAzarCuandoLaTiradaSuperaLasFranjas() {
-        GeneradorDificultad generador = generadorCon(0.99, Jugada.TIJERA);
-
-        generador.generar(Jugada.PIEDRA, NIVEL_MEDIO);
-        Jugada respuesta = generador.generar(Jugada.PAPEL, NIVEL_MEDIO);
-
-        assertEquals(Jugada.TIJERA, respuesta);
-    }
-
-    @Test
-    void enElNivelMaximoContrarrestaConElTope() {
-        GeneradorDificultad generador = generadorCon(0.3, Jugada.PIEDRA);
-
-        generador.generar(Jugada.PIEDRA, NIVEL_MAXIMO);
-        Jugada respuesta = generador.generar(Jugada.TIJERA, NIVEL_MAXIMO);
+        Jugada respuesta = generador.generar(Jugada.PIEDRA, NIVEL_CERO);
 
         assertEquals(Jugada.PAPEL, respuesta);
+    }
+
+    @Test
+    void juegaAlAzarCuandoLaTiradaSuperaElUmbralDePatron() {
+        GeneradorDificultad generador = generadorCon(0.6, Jugada.TIJERA);
+        sembrar(generador, NIVEL_CERO, Jugada.PIEDRA, Jugada.TIJERA, Jugada.PIEDRA, Jugada.TIJERA);
+
+        Jugada respuesta = generador.generar(Jugada.PIEDRA, NIVEL_CERO);
+
+        assertEquals(Jugada.TIJERA, respuesta);
+    }
+
+    @Test
+    void sinPrediccionPorEmpateJuegaAlAzar() {
+        GeneradorDificultad generador = generadorCon(0.0, Jugada.TIJERA);
+        sembrar(generador, NIVEL_CERO,
+            Jugada.PIEDRA, Jugada.TIJERA, Jugada.PIEDRA, Jugada.PAPEL, Jugada.PIEDRA);
+
+        Jugada respuesta = generador.generar(Jugada.PIEDRA, NIVEL_CERO);
+
+        assertEquals(Jugada.TIJERA, respuesta);
     }
 }

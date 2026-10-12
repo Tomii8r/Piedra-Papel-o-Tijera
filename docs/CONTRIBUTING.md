@@ -20,7 +20,8 @@ la máquina, con interfaz gráfica. El objetivo es aplicar de forma didáctica:
 
 1. El jugador entra al menú principal y pulsa **Empezar juego**.
 2. Elige entre **Piedra**, **Papel** o **Tijera**.
-3. El bot elige su jugada con `GeneradorDificultad` (azar sesgado según el nivel).
+3. El bot predice tu jugada con `PredictorJugada` y la contrarresta con `GeneradorDificultad`
+   (según el nivel).
 4. Se comparan ambas jugadas:
    - **Gana** → se suma **+1** al puntaje actual, suena el efecto de victoria y el juego
      continúa al instante.
@@ -29,25 +30,27 @@ la máquina, con interfaz gráfica. El objetivo es aplicar de forma didáctica:
    - **Empata** → la partida cuenta como jugada pero **no suma ni resta**; se permanece
      en la pantalla de juego.
 5. `puntaje` y `puntajeMaximo` se guardan en **variables en memoria** (sin persistencia).
-6. La **dificultad sube con la racha actual** (cada 10 victorias **seguidas**) y **vuelve a 0
-   al perder** (el puntaje se reinicia), hasta un tope (`NIVEL_MAX = 5`). El bot va desde
-   "juega fácil" (se deja ganar más seguido que el azar) hasta "contrarresta tu jugada
-   anterior", sin volverse imbatible. El nivel se muestra al lado del puntaje: **`12 (Nivel 1)`**.
+6. El **nivel** sube con la racha actual (cada 10 victorias **seguidas**) y **vuelve a 0 al
+   perder**, hasta un tope (`NIVEL_MAX = 5`); se muestra al lado del puntaje: **`12 (Nivel 1)`**.
+   Además, el bot **aprende tu patrón desde la primera ronda** y te contrarresta (ver abajo).
 
-### Dificultad progresiva
+### Nivel y predicción
 
-| Nivel | Racha | Prob. de contrarrestar | Prob. de dejarse ganar | P(ganar) aprox. |
-|---|---|---|---|---|
-| 0 | 0–9   | 0,00 | 0,90 | 0,93 |
-| 1 | 10–19 | 0,07 | 0,72 | 0,79 |
-| 2 | 20–29 | 0,14 | 0,54 | 0,65 |
-| 3 | 30–39 | 0,21 | 0,36 | 0,50 |
-| 4 | 40–49 | 0,28 | 0,18 | 0,36 |
-| 5 | 50+   | 0,35 | 0,00 | 0,22 |
+El nivel sube cada 10 victorias **seguidas** y vuelve a 0 al perder (`NIVEL_MAX = 5`):
 
-El nivel se mide sobre el **puntaje** (racha de victorias seguidas), así que **se reinicia al
-perder**. La referencia del bot es la **jugada anterior** del humano (no la de la ronda en
-curso); en la primera ronda juega al azar puro.
+| Nivel | Racha |
+|---|---|
+| 0 | 0–9 |
+| 1 | 10–19 |
+| 2 | 20–29 |
+| 3 | 30–39 |
+| 4 | 40–49 |
+| 5 | 50+ |
+
+El bot **predice** tu próxima jugada con `PredictorJugada` (Markov: qué jugaste otras veces
+después de tu última jugada) y la **contrarresta desde la primera ronda** con una probabilidad
+mínima del **50%**; si no hay patrón claro (o hay empate), juega al azar. La curva de
+`Dificultad` se conserva (para el cálculo del nivel mostrado).
 
 ### Tecnologías
 
@@ -79,6 +82,7 @@ ppt/
 │   │   ├── GeneradorJugada.java
 │   │   ├── GeneradorRandom.java
 │   │   ├── GeneradorDificultad.java
+│   │   ├── PredictorJugada.java
 │   │   ├── Dificultad.java
 │   │   ├── ResolutorReglas.java
 │   │   └── Partida.java
@@ -109,6 +113,7 @@ ppt/
     │   ├── DificultadTest.java
     │   ├── GeneradorRandomTest.java
     │   ├── GeneradorDificultadTest.java
+    │   ├── PredictorJugadaTest.java
     │   ├── JugadorHumanoTest.java
     │   ├── JugadorMaquinaTest.java
     │   └── PartidaTest.java
@@ -228,7 +233,7 @@ public class JugadorMaquina extends Jugador {
 }
 ```
 
-### 3.4 `GeneradorJugada` (interfaz), `GeneradorRandom`, `Dificultad` y `GeneradorDificultad` — *Protected Variations / DIP*
+### 3.4 `GeneradorJugada` (interfaz), `GeneradorRandom`, `Dificultad`, `PredictorJugada` y `GeneradorDificultad` — *Protected Variations / DIP / Information Expert*
 
 ```java
 public interface GeneradorJugada {
@@ -272,16 +277,43 @@ public class Dificultad {
 }
 ```
 
-`GeneradorDificultad` **decora** a un generador de azar: recuerda la jugada anterior del
-humano y, según la curva, contrarresta, se deja ganar o juega al azar.
+`PredictorJugada` aprende tu patrón (Markov de orden 1: mira qué jugaste después de tu última
+jugada) y `GeneradorDificultad` lo **decora** sobre un generador de azar: si detecta un patrón,
+contrarresta tu jugada predicha (con una probabilidad mínima del 50%); si no hay patrón (o hay
+empate), juega al azar.
+
+```java
+public class PredictorJugada {
+    public static final int VENTANA = 10;
+    private final Deque<Jugada> historial = new ArrayDeque<>();
+
+    public void registrar(Jugada jugada) {
+        historial.addLast(jugada);
+        if (historial.size() > VENTANA) historial.removeFirst();
+    }
+
+    public Optional<Jugada> predecir() {
+        if (historial.size() < 2) return Optional.empty();
+        Jugada contexto = historial.peekLast();
+        int[] conteo = new int[Jugada.values().length];
+        Jugada anterior = null;
+        for (Jugada jugada : historial) {
+            if (anterior == contexto) conteo[jugada.ordinal()]++;
+            anterior = jugada;
+        }
+        // devuelve la más frecuente; vacío si no hay datos o hay empate
+    }
+}
+```
 
 ```java
 public class GeneradorDificultad implements GeneradorJugada {
+    private static final double MINIMO_CONTRA_PATRON = 0.50;
+
     private final GeneradorJugada azar;
     private final Dificultad dificultad;
     private final Random random;
-
-    private Jugada jugadaAnteriorHumano;
+    private final PredictorJugada predictor = new PredictorJugada();
 
     public GeneradorDificultad(GeneradorJugada azar, Dificultad dificultad, Random random) {
         this.azar = azar;
@@ -290,30 +322,28 @@ public class GeneradorDificultad implements GeneradorJugada {
     }
 
     @Override public Jugada generar(Jugada jugadaHumano, int nivel) {
+        Optional<Jugada> predicha = predictor.predecir();
+
         Jugada respuesta;
-        if (jugadaAnteriorHumano == null) {                 // primera ronda: sin historial
+        if (predicha.isEmpty()) {                           // sin patrón o empate: azar
             respuesta = azar.generar(jugadaHumano, nivel);
         } else {
-            double contra = dificultad.probabilidadContra(nivel);
-            double pierde = dificultad.probabilidadPierde(nivel);
-            double tirada = random.nextDouble();
-
-            if (tirada < contra) {
-                respuesta = jugadaAnteriorHumano.vencedora();
-            } else if (tirada < contra + pierde) {
-                respuesta = jugadaAnteriorHumano.perdedora();
+            double contra = Math.max(dificultad.probabilidadContra(nivel), MINIMO_CONTRA_PATRON);
+            if (random.nextDouble() < contra) {
+                respuesta = predicha.get().vencedora();
             } else {
                 respuesta = azar.generar(jugadaHumano, nivel);
             }
         }
-        jugadaAnteriorHumano = jugadaHumano;
+        predictor.registrar(jugadaHumano);
         return respuesta;
     }
 }
 ```
 
-> El `Random` se **inyecta** en ambos generadores: permite semilla fija en tests o un
-> `RandomFijo` para forzar cada rama del `GeneradorDificultad`.
+> Si repetís mucho la misma jugada, el predictor la detecta y el bot la contrarresta **desde la
+> primera ronda** (mínimo 50%). Si jugás variado, no hay patrón y el bot cae al azar. El
+> `Random` se **inyecta** para permitir semilla fija o un `RandomFijo` en tests.
 
 ### 3.5 `ResolutorReglas` — *Pure Fabrication / SRP*
 
@@ -805,7 +835,7 @@ Resultado = EMPATA
 
 ## 10. Tests
 
-Batería de **78 tests** con JUnit 5, ejecutables sin abrir ventanas (surefire corre en modo
+Batería de **81 tests** con JUnit 5, ejecutables sin abrir ventanas (surefire corre en modo
 headless: `-Djava.awt.headless=true`). El audio **no** se ejercita en la suite: los tests usan
 `PanelJuegoFake`, así que solo se valida la lógica de la pausa por derrota (2000 ms).
 
@@ -837,7 +867,8 @@ El wrapper usa Maven 3.9.16. El `pom.xml` fija Java 25, JUnit Jupiter 5.11.4,
 | `ResolutorReglasTest` | Las 9 combinaciones → `GANA`/`PIERDE`/`EMPATA` (parametrizado con `@CsvSource`). |
 | `DificultadTest` | `nivel` (cortes cada 10 y tope en 5), probabilidades en los extremos, monotonía y acotado fuera de rango. |
 | `GeneradorRandomTest` | Siempre devuelve una `Jugada`; misma semilla → misma secuencia; con suficientes tiradas usa las tres opciones. |
-| `GeneradorDificultadTest` | Primera ronda sin estrategia; contrarresta la jugada anterior; se deja ganar en nivel 0; cae al azar fuera de las franjas (con `RandomFijo`). |
+| `GeneradorDificultadTest` | Sin predicción → azar; contrarresta la jugada **predicha** con al menos 50% (incluso en nivel 0); al repetir la misma jugada la contrarresta; empate de predicción → azar; cae al azar si la tirada supera el 50% (con `RandomFijo`). |
+| `PredictorJugadaTest` | Sin historial → vacío; predice la transición más frecuente; empate → vacío; respeta la ventana de 10 jugadas. |
 | `JugadorHumanoTest` | `elegirJugada()` devuelve lo seteado; `null` sin selección. |
 | `JugadorMaquinaTest` | Delega en el `GeneradorJugada` inyectado, con el contexto `(rival, nivel)`. |
 | `PartidaTest` | Gana +1/actualiza máximo; pierde reinicia y conserva máximo; empate sin cambios; secuencia GANA·GANA·PIERDE → `0`/`2`; **regresión**: `getJugadaMaquina()` devuelve la jugada resuelta; el **nivel** sube con 10 **victorias seguidas** y **se reinicia al perder**. |
